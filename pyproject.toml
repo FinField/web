@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "finweb"
+version = "0.1.0"
+description = "The FinField explorer: framework-free static site + deterministic builder compiling the universe and cached SEC facts into content-addressed data shards, verifiable offline"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = ["finfacts"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+# Including live SEC facts in a build (--facts/--fetch) needs the scrapers:
+#   pip install "finscrapers @ git+https://github.com/FinField/scrapers"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "../facts/src"]
+testpaths = ["tests"]

@@ -1,0 +1,9 @@
+__pycache__/
+*.egg-info/
+dist/
+.pytest_cache/
+.venv/
+
+# generated site data + source caches (shards live on gh-pages, never on main)
+web/data/
+.cache/

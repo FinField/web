@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinField — provenance-first financial facts</title>
+<meta name="description" content="Open, provenance-first financial facts: 20,000+ listed companies and crypto assets. Every number carries its source and a deterministic content id.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="inner">
+  <a href="./"><b>Fin</b>Field</a>
+  <span class="tag">open · provenance-first · knitted into the knitweb P2P network</span>
+</div></header>
+<main>
+  <h1>Search 20,000+ listed companies &amp; crypto assets</h1>
+  <input id="q" type="search" placeholder="Ticker or name — e.g. AAPL, ASML, Toyota, BTC" autocomplete="off">
+  <ul id="results"></ul>
+  <p id="stats" class="empty"></p>
+  <footer>
+    Every fact is a content-addressed record: value as exact scaled integer, source reference,
+    fetch date, CID. Verify offline with <code>python -m finweb.build --verify</code>.
+    · <a href="https://github.com/FinField/web" rel="noopener">github.com/FinField/web</a>
+    · <a href="https://finfield.github.io" rel="noopener">about FinField</a>
+  </footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
