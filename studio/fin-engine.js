@@ -270,18 +270,31 @@ const SEED_TERMS = [
     definition: "trailing-twelve-month price / earnings ratio (a derived concept)" },
 ];
 
+// The explorer data lives at different paths per host: ../data when the Studio
+// is served under the same tree as the explorer (finfield.github.io/web/studio/
+// → ../data), /fin/data on the 5mart mount, and the absolute Pages URL as a
+// last resort. Try each; fall back to hardcoded reals so the Studio always seeds.
+async function fetchFirst(entity) {
+  const candidates = [
+    `../data/e/${entity}.json`,
+    `/fin/data/e/${entity}.json`,
+    `https://finfield.github.io/web/data/e/${entity}.json`,
+  ];
+  for (const url of candidates) {
+    try {
+      const r = await fetch(url, { cache: "no-store" });
+      if (r.ok) return await r.json();
+    } catch (_) { /* try next */ }
+  }
+  return null;
+}
+
 async function loadSeedFacts() {
   const facts = [];
-  // Root-relative to the /fin/ mount (production) — also resolves when the site
-  // is served from web/ locally. Graceful: fall back to hardcoded reals.
-  try {
-    const r = await fetch("/fin/data/e/AAPL_US.json", { cache: "no-store" });
-    if (r.ok) facts.push(...factsFromDoc(await r.json()).slice(0, 3));
-  } catch (_) { /* graceful */ }
-  try {
-    const r = await fetch("/fin/data/e/BTC_CRYPTO.json", { cache: "no-store" });
-    if (r.ok) facts.push(...factsFromDoc(await r.json(), ["finfield:block_height"]));
-  } catch (_) { /* graceful */ }
+  const aapl = await fetchFirst("AAPL_US");
+  if (aapl) facts.push(...factsFromDoc(aapl).slice(0, 3));
+  const btc = await fetchFirst("BTC_CRYPTO");
+  if (btc) facts.push(...factsFromDoc(btc, ["finfield:block_height"]));
   if (!facts.length) facts.push(...FALLBACK_FACTS);
   return facts;
 }
