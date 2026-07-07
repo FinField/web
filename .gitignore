@@ -5,5 +5,7 @@ dist/
 .venv/
 
 # generated site data + source caches (shards live on gh-pages, never on main)
-web/data/
 .cache/
+
+
+web/data/
