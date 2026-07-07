@@ -79,6 +79,9 @@ def build(feed_dir: Path, out: Path) -> dict:
     if hp.exists():
         head = json.loads(hp.read_text())
 
+    from finweb.signals import compute_signals
+    signals = compute_signals(feed_dir)
+
     index = []
     for ticker in sorted(set(entities) | set(facts)):
         ent = entities.get(ticker, {"kind": "finfield-entity", "ticker": ticker})
@@ -110,6 +113,7 @@ def build(feed_dir: Path, out: Path) -> dict:
             "concepts": dict(sorted(by_concept.items())),
             "sources": sorted(sources),
             "fact_count": len(rows),
+            "signal": signals.get(ticker),  # expected-return term structure (None if uncovered)
         }
         (out / "e" / f"{safe_ticker(ticker)}.json").write_text(
             canonical_json(pack) + "\n", encoding="utf-8")

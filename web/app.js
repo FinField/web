@@ -80,6 +80,7 @@ async function initCompany(){
      `<button class="btn primary" id="dl-json">⭳ entity JSON</button>`+
      `<button class="btn" id="dl-csv">⭳ facts CSV</button>`+
      `<a class="btn" href="studio/?t=${encodeURIComponent(t)}">✍ open in Studio (propose / vote)</a></div>`;
+  h+=signalSection(d.signal);
   const srcs=d.sources||[];
   h+=`<div class="srcbar">${srcs.map(s=>`<span class="chip on" data-s="${esc(s)}">${esc(SRC_LABEL[s]||s)}</span>`).join("")}</div>`;
   const concepts=Object.entries(d.concepts);
@@ -104,6 +105,7 @@ async function initCompany(){
   h+=`</div>`;
   if(!concepts.length)h+=`<p class="empty">No facts for this entity yet.</p>`;
   el.innerHTML=h;
+  if(d.signal){ drawTermStructure($("#termchart"), d.signal); $("#dl-signal").onclick=()=>download(`${safe(t)}-signal.json`,JSON.stringify(d.signal,null,1)); }
   $("#dl-json").onclick=()=>download(`${safe(t)}.json`,JSON.stringify(d,null,1));
   $("#dl-csv").onclick=()=>download(`${safe(t)}.csv`,toCSV(d));
   // source filter
@@ -129,6 +131,64 @@ async function initCompany(){
     td.title=ok?`recomputed sha256 matches: ${claimed}`:`recomputed ${got} ≠ stored ${claimed}`;
   });
 }
+/* ---------- time / risk-factor graph (expected-return term structure) ---------- */
+const pct=b=>(b/100).toFixed(1)+"%";
+function signalSection(sig){
+  if(!sig) return `<h2>Time / risk-factor outlook</h2><p class="empty">No cross-sectional factor coverage for this asset yet (needs free-float mcap + fundamentals). Crypto uses on-chain / momentum — coming.</p>`;
+  const d=sig.dominant, e=sig.expected_annual_bps;
+  const dir=e>=0?"up":"down", sign=e>=0?"+":"";
+  const bars=sig.factors.map(f=>{
+    const w=Math.min(100,Math.abs(f.contribution_bps)/6);
+    const pos=f.contribution_bps>=0;
+    return `<div class="fbar"><span class="fk">${esc(f.label)}</span>`+
+      `<span class="ftrack"><span class="ffill ${pos?'pos':'neg'}" style="width:${w}%"></span></span>`+
+      `<span class="fv ${pos?'pos':'neg'}">${f.contribution_bps>=0?'+':''}${pct(f.contribution_bps)} · p${f.percentile}</span></div>`;
+  }).join("");
+  return `<h2>Time / risk-factor outlook</h2>`+
+    `<div class="card signal">`+
+    `<div class="predict ${dir}"><span class="plabel">Most important signal</span>`+
+    `<b>${esc(d.label)}</b> — ${esc(d.direction)} premium, ${d.percentile}ᵗʰ pct`+
+    `<span class="exp ${dir}">E[excess] ${sign}${pct(e)}/yr</span></div>`+
+    `<canvas id="termchart" height="220"></canvas>`+
+    `<div class="factors">${bars}</div>`+
+    `<div class="note">Expected-excess term structure from cross-sectional factor exposures. `+
+    `Premia are long-run academic estimates per 1σ — a model assumption, not a measured fact. `+
+    `<button class="btn" id="dl-signal">⭳ signal JSON</button></div></div>`;
+}
+function drawTermStructure(cv,sig){
+  if(!cv) return;
+  const term=sig.term, DPR=window.devicePixelRatio||1;
+  const W=cv.clientWidth||cv.parentElement.clientWidth||640, H=220;
+  cv.width=W*DPR; cv.height=H*DPR; cv.style.width="100%"; const g=cv.getContext("2d"); g.scale(DPR,DPR);
+  const padL=48,padR=14,padT=14,padB=26, iw=W-padL-padR, ih=H-padT-padB;
+  const xs=term.map(p=>p.m), maxX=Math.max(...xs);
+  const ys=term.flatMap(p=>[p.lo_bps,p.hi_bps,p.mid_bps]);
+  let lo=Math.min(...ys,0), hi=Math.max(...ys,0); const span=(hi-lo)||100; lo-=span*0.08; hi+=span*0.08;
+  const X=m=>padL+iw*(m/maxX), Y=b=>padT+ih*(1-(b-lo)/(hi-lo));
+  const css=getComputedStyle(document.documentElement);
+  const line=css.getPropertyValue("--acc").trim()||"#4ea1ff", dim=css.getPropertyValue("--dim").trim()||"#8b98ac";
+  g.clearRect(0,0,W,H);
+  // zero axis
+  g.strokeStyle=css.getPropertyValue("--line").trim()||"#222a3a"; g.lineWidth=1;
+  g.beginPath(); g.moveTo(padL,Y(0)); g.lineTo(W-padR,Y(0)); g.stroke();
+  // y labels
+  g.fillStyle=dim; g.font="11px ui-monospace,monospace"; g.textAlign="right";
+  [hi,(hi+lo)/2,lo].forEach(v=>{const y=Y(v); g.fillText((v/100).toFixed(0)+"%",padL-6,y+3);});
+  g.textAlign="center"; xs.forEach(m=>{ if(m%6===0) g.fillText(m+"m",X(m),H-8); });
+  // band
+  g.fillStyle=(line.startsWith("#")?hexA(line,0.15):"rgba(78,161,255,.15)");
+  g.beginPath(); term.forEach((p,i)=>{const x=X(p.m),y=Y(p.hi_bps); i?g.lineTo(x,y):g.moveTo(x,y);});
+  for(let i=term.length-1;i>=0;i--){const p=term[i]; g.lineTo(X(p.m),Y(p.lo_bps));} g.closePath(); g.fill();
+  // mid line
+  g.strokeStyle=line; g.lineWidth=2; g.beginPath();
+  term.forEach((p,i)=>{const x=X(p.m),y=Y(p.mid_bps); i?g.lineTo(x,y):g.moveTo(x,y);}); g.stroke();
+  // endpoint dot + label
+  const last=term[term.length-1];
+  g.fillStyle=line; g.beginPath(); g.arc(X(last.m),Y(last.mid_bps),3,0,7); g.fill();
+  g.textAlign="right"; g.fillStyle=css.getPropertyValue("--fg").trim()||"#e6edf3";
+  g.fillText(((last.mid_bps/100).toFixed(1))+"%",X(last.m)-6,Y(last.mid_bps)-6);
+}
+function hexA(hex,a){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;}
 function refLink(s){
   const kind=s.kind||"",ref=s.ref||"";
   if(kind==="sec-companyfacts"&&/^\d{10}-\d{2}-\d{6}$/.test(ref)){
