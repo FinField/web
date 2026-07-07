@@ -1,0 +1,29 @@
+{
+  "name": "FinField Studio — the signed financial field",
+  "short_name": "FinField",
+  "description": "A peer-to-peer financial-facts studio. Every tab is a full Knitweb peer running the real finfacts+finknit+knitweb engine in-browser (WASM) — no backend. Knit facts and terms, weave signed Fibers, vote with your Pulse account. Provenance-first, content-addressed.",
+  "id": "./",
+  "scope": "./",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f1a1e",
+  "theme_color": "#0f1a1e",
+  "categories": ["finance", "productivity"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='36' fill='%230f1a1e'/%3E%3Ctext x='96' y='140' font-size='120' text-anchor='middle'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230f1a1e'/%3E%3Ctext x='256' y='372' font-size='320' text-anchor='middle'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
