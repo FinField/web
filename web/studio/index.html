@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Studio — knit &amp; verify across the fields, in your browser</title>
+  <meta name="description" content="A serverless in-browser Knitweb: derive a pulse account, knit a term into any field, propose a finfield fact, and cast signed verdicts — all in-tab, no server." />
+  <style>
+    :root {
+      --bg:#0b0e14; --panel:#131823; --line:#222a3a; --fg:#e6edf3;
+      --dim:#8b98ac; --acc:#4ea1ff; --good:#3fb950; --bad:#f85149;
+      --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg);
+      font:15px/1.55 ui-sans-serif,system-ui,-apple-system,sans-serif; }
+    a { color:var(--acc); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+    .wrap { max-width:840px; margin:0 auto; padding:1rem 1rem 4rem; }
+    .hidden { display:none !important; }
+    .dim { color:var(--dim); }
+    .mono, .cid { font-family:var(--mono); }
+    .cid { color:var(--acc); word-break:break-all; font-size:.82rem; }
+
+    /* ---- boot splash ---- */
+    #boot { position:fixed; inset:0; z-index:50; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:14px; text-align:center;
+      background:var(--bg); color:var(--fg); padding:24px; }
+    #boot.done { display:none; }
+    #boot .logo { font-size:52px; line-height:1; }
+    #boot h1 { margin:0; font-size:22px; letter-spacing:.3px; }
+    #boot .sub { max-width:40ch; color:var(--dim); font-size:.9rem; }
+    #boot .barwrap { width:min(320px,80vw); height:8px; border-radius:6px;
+      background:var(--panel); border:1px solid var(--line); overflow:hidden; }
+    #boot .bar { width:4%; height:100%; background:var(--acc); transition:width .3s ease; }
+    #boot .bar.failed { background:var(--bad); }
+    #boot .phase { min-height:1.4em; color:var(--dim); font-size:.85rem; }
+    #boot .err { color:var(--bad); max-width:52ch; white-space:pre-wrap;
+      text-align:left; font-family:var(--mono); font-size:.8rem; }
+
+    /* ---- header ---- */
+    header.site { display:flex; align-items:center; justify-content:space-between;
+      gap:1rem; flex-wrap:wrap; border-bottom:1px solid var(--line); padding:.8rem 1rem;
+      position:sticky; top:0; background:rgba(11,14,20,.92); backdrop-filter:blur(8px); z-index:5; }
+    header.site .brand { font-weight:600; }
+    header.site .brand small { color:var(--dim); font-weight:400; }
+    header.site nav { display:flex; gap:.9rem; font-size:.85rem; flex-wrap:wrap; }
+
+    /* ---- cards / sections ---- */
+    section { margin:1.4rem 0; }
+    h2 { font-size:1.05rem; margin:.2rem 0 .5rem; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+      padding:1rem 1.1rem; margin:.7rem 0; }
+    .note { color:var(--dim); font-size:.86rem; margin:.2rem 0 .8rem; }
+
+    /* ---- account ---- */
+    .acct dl { display:grid; grid-template-columns:max-content 1fr; gap:.3rem .9rem; margin:0; }
+    .acct dt { color:var(--dim); }
+    .acct dd { margin:0; font-family:var(--mono); font-size:.85rem; word-break:break-all; }
+
+    /* ---- field picker ---- */
+    .fields { display:flex; gap:.5rem; flex-wrap:wrap; margin:.4rem 0 1rem; }
+    .field-btn { padding:.45rem .9rem; border:1px solid var(--line); border-radius:999px;
+      background:var(--panel); color:var(--dim); cursor:pointer; font:inherit; font-size:.9rem; }
+    .field-btn:hover { border-color:var(--acc); }
+    .field-btn.on { color:#03101f; background:var(--acc); border-color:var(--acc); font-weight:600; }
+
+    /* ---- forms ---- */
+    .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:.7rem; }
+    label { display:flex; flex-direction:column; gap:.25rem; font-size:.82rem; color:var(--dim); }
+    input { padding:.55rem .7rem; font-size:.95rem; border-radius:8px;
+      border:1px solid var(--line); background:var(--bg); color:var(--fg); font:inherit; }
+    input:focus { outline:none; border-color:var(--acc); }
+    .btn { display:inline-block; padding:.5rem .9rem; border:1px solid var(--line);
+      border-radius:8px; background:var(--panel); color:var(--fg); cursor:pointer;
+      font:inherit; font-size:.88rem; }
+    .btn:hover { border-color:var(--acc); }
+    .btn.primary { background:var(--acc); color:#03101f; border-color:var(--acc); font-weight:600; }
+    .btn.good { border-color:var(--good); color:var(--good); }
+    .btn.bad { border-color:var(--bad); color:var(--bad); }
+    .btn:disabled { opacity:.5; cursor:default; }
+
+    /* ---- votable rows ---- */
+    .vrow .vhead { display:flex; gap:.55rem; align-items:baseline; flex-wrap:wrap; }
+    .vrow .tk { font-weight:600; }
+    .vrow .cc { font-family:var(--mono); font-size:.8rem; color:var(--dim); }
+    .vrow .v { font-family:var(--mono); font-size:1.05rem; margin:.25rem 0; }
+    .vrow .v.defn { font-family:inherit; font-size:.95rem; color:var(--fg); }
+    .vrow .prov { color:var(--dim); font-size:.78rem; font-family:var(--mono); margin-bottom:.5rem; }
+    .vrow .vote-row { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+    .vrow .tally { font-family:var(--mono); font-size:.8rem; color:var(--dim); margin-left:.3rem; }
+    .vrow .tally.good { color:var(--good); }
+    .vrow .tally.bad { color:var(--bad); }
+    .field-tag { font-size:.7rem; text-transform:uppercase; letter-spacing:.4px;
+      padding:.1rem .45rem; border-radius:999px; border:1px solid var(--line); color:var(--dim); }
+    .field-tag.finfield { color:var(--acc); border-color:var(--acc); }
+    .field-tag.chemfield { color:var(--good); border-color:var(--good); }
+    .field-tag.intelfield { color:#d29bff; border-color:#d29bff; }
+    .field-tag.ledgerfield { color:#f0b429; border-color:#f0b429; }
+
+    /* ---- toast ---- */
+    .toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%) translateY(20px);
+      background:var(--panel); border:1px solid var(--line); color:var(--fg);
+      padding:.6rem 1rem; border-radius:10px; font-size:.85rem; opacity:0;
+      pointer-events:none; transition:.25s; max-width:90vw; z-index:20; }
+    .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .toast.good { border-color:var(--good); }
+    .toast.bad { border-color:var(--bad); }
+    @media (max-width:560px){ .grid { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+  <!-- boot splash -->
+  <div id="boot" role="status" aria-live="polite">
+    <div class="logo">🧵</div>
+    <h1>Studio</h1>
+    <p class="sub">
+      Booting your in-browser Knitweb. The real engine — finfacts + finknit +
+      knitweb — runs <b>inside this tab</b> via Pyodide. No server: you knit terms
+      and sign verdicts with your own pulse account. First load fetches the WASM runtime.
+    </p>
+    <div class="barwrap"><div class="bar" id="boot-bar"></div></div>
+    <div class="phase" id="boot-phase">starting…</div>
+    <div class="err" id="boot-err"></div>
+  </div>
+
+  <!-- app -->
+  <header class="site">
+    <span class="brand">🧵 <b>Studio</b> <small>· knit &amp; verify across the fields</small></span>
+    <nav aria-label="Fields">
+      <a href="https://finfield.github.io/web/" title="FinField explorer">finfield</a>
+      <a href="https://chemfield.github.io/openchem/" title="ChemField">chemfield</a>
+      <a href="https://chemfield.github.io/openchem/molgang/" title="MOLGANG (chemistry knitweb)">molgang</a>
+      <a href="https://github.com/intelfield" title="IntelField">intelfield</a>
+      <a href="https://github.com/ledgerfield/ledgerfield" title="LedgerField">ledgerfield</a>
+    </nav>
+  </header>
+
+  <main id="studio" class="wrap hidden">
+
+    <section class="acct">
+      <h2>Your pulse account</h2>
+      <p class="note">Derived in-tab from a device seed (WebCrypto CSPRNG, stretched with pbkdf2).
+        This is <b>your in-browser wallet</b> — it never leaves this origin, and every term, fact and
+        verdict you weave is signed with it (secp256k1 ECDSA). Clear site data and it is gone.</p>
+      <div class="card">
+        <dl>
+          <dt>address</dt><dd id="acct-address" class="mono">…</dd>
+          <dt>pubkey</dt><dd id="acct-pubkey" class="mono">…</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section>
+      <h2>Pick a field</h2>
+      <p class="note">Every field is a domain knitweb. Knit a new term into any of them; finfield
+        additionally has the integer-only fact path below.</p>
+      <div class="fields" role="tablist">
+        <button class="field-btn" data-field="finfield">finfield</button>
+        <button class="field-btn" data-field="chemfield">chemfield</button>
+        <button class="field-btn" data-field="intelfield">intelfield</button>
+        <button class="field-btn" data-field="ledgerfield">ledgerfield</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Knit a new term into <span id="k-field-label" class="mono">finfield</span></h2>
+      <p class="note">One signed record — <span class="mono">{kind:"knit-term", field, term, definition, relations?, author}</span> —
+        woven through the same attest/weave path for every field.</p>
+      <form id="knit-form" class="card">
+        <div class="grid">
+          <label>term<input id="k-term" placeholder="e.g. NH BLOOM" required /></label>
+          <label>definition<input id="k-definition" placeholder="what it means" /></label>
+          <label>relation (optional)<input id="k-rel" placeholder="e.g. derived-from" /></label>
+          <label>relation target (optional)<input id="k-target" placeholder="e.g. steel-slag" /></label>
+        </div>
+        <div style="margin-top:.8rem;"><button type="submit" class="btn primary">Knit this term</button></div>
+      </form>
+    </section>
+
+    <section id="propose-section">
+      <h2>Propose a finfield fact</h2>
+      <p class="note">Weave a financial fact. Values are <b>scaled integers</b> — the canonical path
+        forbids floats, so money and state stay exact. Signed and content-addressed to a CID.</p>
+      <form id="propose-form" class="card">
+        <div class="grid">
+          <label>entity (ticker)<input id="f-entity" value="AAPL US" required /></label>
+          <label>concept<input id="f-concept" value="us-gaap:Revenues" required /></label>
+          <label>value (integer)<input id="f-value" value="391035000000" inputmode="numeric" required /></label>
+          <label>scale (10⁻ⁿ)<input id="f-scale" value="0" inputmode="numeric" /></label>
+          <label>unit<input id="f-unit" value="USD" required /></label>
+          <label>period end (ISO)<input id="f-period" value="2024-09-28" required /></label>
+          <label>source kind<input id="f-source-kind" value="sec-companyfacts" /></label>
+          <label>source ref<input id="f-source-ref" value="0000320193-24-000123" /></label>
+        </div>
+        <div style="margin-top:.8rem;"><button type="submit" class="btn primary">Weave this fact</button></div>
+      </form>
+    </section>
+
+    <section>
+      <h2>Vote — facts &amp; terms to verify</h2>
+      <p class="note">Cast a signed verdict on any woven CID.
+        <b>Mode: signed-verdict</b> — knitweb-vank personhood gating is not available in-browser, so this
+        is pubkey-weighted: one vote per distinct signer (your account is the signer here), latest verdict
+        per author counting. Personhood-gated one-person-one-vote is the documented upgrade.</p>
+      <div id="verify-list"><p id="verify-empty" class="dim">loading seeds…</p></div>
+    </section>
+
+    <section>
+      <h2>Take your weave with you</h2>
+      <p class="note">Everything you wove — entities, facts, knitted terms, and signed verdicts — as JSONL.</p>
+      <button id="download-btn" class="btn">⬇ Download what I wove (.jsonl)</button>
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="./fin-engine.js"></script>
+</body>
+</html>
