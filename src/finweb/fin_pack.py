@@ -61,6 +61,8 @@ def build(feed_dir: Path, out: Path) -> dict:
 
     entities: dict[str, dict] = {}
     facts: dict[str, list] = defaultdict(list)
+    author = ""  # publisher address on the signed records — the browser needs
+                 # it to reconstruct each record and recompute its CID
     for rec in iter_records(feed_dir):
         kind = rec.get("kind")
         if kind == "finfield-entity":
@@ -69,6 +71,8 @@ def build(feed_dir: Path, out: Path) -> dict:
             eid = rec.get("entity", "")
             ticker = eid.split(":", 1)[-1] if eid.startswith("ticker:") else eid
             facts[ticker].append(rec)
+            if not author:
+                author = rec.get("author", "")
 
     head = {}
     hp = feed_dir / "feed" / "head.json"
@@ -102,6 +106,7 @@ def build(feed_dir: Path, out: Path) -> dict:
         pack = {
             "schema": SCHEMA,
             "entity": {k: v for k, v in ent.items() if k not in ("author", "kind")},
+            "author": author,  # publisher address — for client-side CID recompute
             "concepts": dict(sorted(by_concept.items())),
             "sources": sorted(sources),
             "fact_count": len(rows),
@@ -122,6 +127,7 @@ def build(feed_dir: Path, out: Path) -> dict:
         "schema": SCHEMA,
         "entities": len(index),
         "facts": sum(e["facts"] for e in index),
+        "author": author,  # lets the explorer recompute each fact's CID client-side
         "feed": {"publisher": head.get("feed", ""), "root": head.get("root", ""),
                  "length": head.get("length", 0), "sig": head.get("sig", "")},
         "sources": sorted({s for e in index for s in e["sources"]}),

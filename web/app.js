@@ -83,12 +83,15 @@ async function initCompany(){
   const srcs=d.sources||[];
   h+=`<div class="srcbar">${srcs.map(s=>`<span class="chip on" data-s="${esc(s)}">${esc(SRC_LABEL[s]||s)}</span>`).join("")}</div>`;
   const concepts=Object.entries(d.concepts);
+  const byCid=new Map();          // cid -> item, for client-side re-hash
+  const author=d.author||"";
   h+=`<div id="facts">`;
   for(const [concept,items] of concepts){
     const src=items[0].source.kind;
     h+=`<div class="concept" data-s="${esc(src)}"><h3>${esc(concept)} <span class="chip">${esc(SRC_LABEL[src]||src)}</span></h3><div class="tablewrap"><table><thead><tr>`+
        `<th>period</th><th>value</th><th>unit</th><th>reference</th><th>integrity</th></tr></thead><tbody>`;
     for(const it of items.slice(0,24)){
+      byCid.set(it.cid,it);
       const p=it.period||{},per=p.start?`${esc(p.start)} → ${esc(p.end||"")}`:esc(p.end||"");
       const dims=(it.dimensions||[]).map(x=>x[1]).join(", ");
       h+=`<tr><td>${per}${dims?` <span class="chip">${esc(dims)}</span>`:""}</td>`+
@@ -109,20 +112,21 @@ async function initCompany(){
     const on=[...el.querySelectorAll(".srcbar .chip.on")].map(x=>x.dataset.s);
     el.querySelectorAll("#facts .concept").forEach(cc=>cc.style.display=on.includes(cc.dataset.s)?"":"none");
   });
-  // client-side integrity verify: recompute sha256 of the shown row's fact
+  // client-side integrity verify: reconstruct the exact signed record and
+  // recompute its sha256 in the browser — the provenance-first promise made real
   el.querySelectorAll(".cid").forEach(td=>td.onclick=async()=>{
-    // rebuild the canonical core record the pack hashed
-    const claimed=td.dataset.cid.slice(7);
-    // find the item
+    const claimed=td.dataset.cid, it=byCid.get(claimed);
+    if(!it){td.className="cid bad";td.textContent="✗ no data";return;}
     td.textContent="verifying…";
-    // we can only recompute if we reconstruct the exact signed record; the pack
-    // stores the display hash, so re-hash the stored fields we have. Mark ok if
-    // the stored hash is well-formed sha256 (64 hex) — full record verify lives
-    // in Studio which holds the signed bytes.
-    const okShape=/^[0-9a-f]{64}$/.test(claimed);
-    td.className="cid "+(okShape?"ok":"bad");
-    td.textContent=(okShape?"✓ ":"✗ ")+claimed.slice(0,12)+"…";
-    td.title=td.dataset.cid;
+    const core={author,concept:it.concept,derived_from:it.derived_from||[],
+      entity:"ticker:"+e.ticker,kind:"finfact-record",period:it.period,
+      scale:it.scale,source:it.source,unit:it.unit,value:it.value};
+    if(it.dimensions&&it.dimensions.length)core.dimensions=it.dimensions;
+    const got="sha256:"+await sha256hex(canonical(core));
+    const ok=got===claimed;
+    td.className="cid "+(ok?"ok":"bad");
+    td.textContent=(ok?"✓ verified ":"✗ mismatch ")+claimed.slice(7,19)+"…";
+    td.title=ok?`recomputed sha256 matches: ${claimed}`:`recomputed ${got} ≠ stored ${claimed}`;
   });
 }
 function refLink(s){
