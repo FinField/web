@@ -43,3 +43,22 @@ footer{color:var(--dim);font-size:.8rem;margin-top:3rem;border-top:1px solid var
 .srcbar{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0}
 .srcbar .chip{cursor:pointer}
 .srcbar .chip.on{color:var(--fg);border-color:var(--acc)}
+/* time / risk-factor outlook */
+.signal{padding:1rem 1.1rem}
+.predict{display:flex;gap:.6rem;align-items:baseline;flex-wrap:wrap;border-left:3px solid var(--acc);padding-left:.7rem;margin-bottom:.7rem}
+.predict.down{border-color:var(--bad)}
+.predict .plabel{color:var(--dim);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em}
+.predict b{font-size:1.05rem}
+.predict .exp{margin-left:auto;font-family:var(--mono);font-weight:700;color:var(--good)}
+.predict.down .exp{color:var(--bad)}
+.signal canvas{display:block;width:100%;margin:.4rem 0}
+.factors{display:flex;flex-direction:column;gap:.3rem;margin:.6rem 0}
+.fbar{display:grid;grid-template-columns:11rem 1fr auto;gap:.6rem;align-items:center;font-size:.82rem}
+.fbar .fk{color:var(--dim)}
+.fbar .ftrack{background:var(--line);border-radius:4px;height:8px;overflow:hidden}
+.fbar .ffill{display:block;height:100%}
+.fbar .ffill.pos{background:var(--good)}.fbar .ffill.neg{background:var(--bad)}
+.fbar .fv{font-family:var(--mono);font-size:.78rem}
+.fbar .fv.pos{color:var(--good)}.fbar .fv.neg{color:var(--bad)}
+.signal .note{color:var(--dim);font-size:.78rem;margin-top:.6rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+@media(max-width:560px){.fbar{grid-template-columns:1fr auto}.fbar .ftrack{display:none}}
