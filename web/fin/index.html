@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FinField — open financial facts, knitted into the Knitweb</title>
+<meta name="description" content="Provenance-first financial facts for thousands of listed companies and crypto assets — every number signed, content-addressed, downloadable, and verifiable in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='82' font-size='82'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site"><div class="in">
+  <span><b>Fin</b>Field</span>
+  <span class="tag">open · provenance-first · knitted into the Knitweb</span>
+  <span class="nav"><a href="studio.html">Studio ✍</a></span>
+</div></header>
+<main>
+  <h1>Search companies &amp; crypto assets</h1>
+  <input id="q" type="search" placeholder="Ticker or name — AAPL, MSFT, BTC, …" autocomplete="off">
+  <div class="stat" id="stat"></div>
+  <ul id="results"></ul>
+  <div class="downloads"><button class="btn" id="dl-index">⭳ download full index (JSON)</button></div>
+  <footer>
+    Every fact is a signed, content-addressed record (exact scaled integer, source reference, sha256 integrity hash) —
+    browse it, download it, verify it. Propose new facts and vote on them in the <a href="studio.html">Studio</a>
+    with your in-browser Pulse account.
+    · <a href="https://github.com/FinField" rel="noopener">github.com/FinField</a>
+  </footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
