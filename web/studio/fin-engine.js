@@ -311,6 +311,8 @@ function fmtValue(f) {
 function votableRow(engine, item) {
   const row = document.createElement("div");
   row.className = "card vrow";
+  row.dataset.field = item.field;
+  row.hidden = item.field !== currentField;
   const isFact = item.kind === "finfact-record";
   const fieldTag = `<span class="field-tag ${esc(item.field)}">${esc(item.field)}</span>`;
   let head, body, prov;
@@ -375,6 +377,19 @@ async function wireStudio(engine) {
     $("k-field-label").textContent = field;
     // The integer-only fact path is finfield-only.
     $("propose-section").classList.toggle("hidden", field !== "finfield");
+    // Filter the verify list to this field only — facts/terms from other
+    // fields must never show up here (each field is its own domain knitweb).
+    let shown = 0;
+    for (const r of document.querySelectorAll("#verify-list .vrow")) {
+      const on = r.dataset.field === field;
+      r.hidden = !on;
+      shown += on ? 1 : 0;
+    }
+    $("verify-empty")?.remove();
+    if (!shown && document.querySelectorAll("#verify-list .vrow").length) {
+      $("verify-list").insertAdjacentHTML("beforeend",
+        `<p id="verify-empty" class="dim">nothing to verify in ${esc(field)} yet — knit a term above.</p>`);
+    }
   };
   for (const b of document.querySelectorAll(".field-btn"))
     b.addEventListener("click", () => setField(b.dataset.field));
